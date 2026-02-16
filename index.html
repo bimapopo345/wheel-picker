@@ -255,6 +255,16 @@
             display: block;
         }
 
+        .btn-skip-all {
+            display: none;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            margin-top: 0;
+        }
+
+        .btn-skip-all.visible {
+            display: block;
+        }
+
         .wheel-section {
             display: flex;
             flex-direction: column;
@@ -576,7 +586,8 @@ Abdul</textarea>
                 </div>
 
                 <button class="btn" id="processBtn" onclick="processNames()">🎲 Proses & Putar Wheel</button>
-                <button class="btn btn-skip" id="skipBtn" onclick="skipAnimation()">⏩ Skip Animasi</button>
+                <button class="btn btn-skip" id="skipBtn" onclick="skipAnimation()">⏩ Skip 1 Putaran</button>
+                <button class="btn btn-skip-all" id="skipAllBtn" onclick="skipAllAnimation()">⏭️ Skip Semua</button>
                 <button class="btn btn-secondary" onclick="resetAll()">🔄 Reset Semua</button>
             </div>
 
@@ -615,6 +626,7 @@ Abdul</textarea>
         let wheelColors = [];
         let audioCtx = null;
         let skipRequested = false;
+        let skipAllRequested = false;
         let pendingTargetRotation = 0;
 
         const WHEEL_COLORS = [
@@ -732,6 +744,13 @@ Abdul</textarea>
 
         function closePopup() {
             document.getElementById('popupOverlay').classList.remove('active');
+
+            // If skip-all active, pick remaining instantly
+            if (skipAllRequested) {
+                pickAllRemaining();
+                return;
+            }
+
             // Continue spinning for next name if needed
             const peoplePerGroup = parseInt(document.getElementById('peoplePerGroup').value);
             const groupCount = parseInt(document.getElementById('groupCount').value);
@@ -739,6 +758,49 @@ Abdul</textarea>
 
             if (removedNames.length < totalNeeded && availableNames.length > 0) {
                 setTimeout(() => spinWheel(), 600);
+            }
+        }
+
+        function pickAllRemaining() {
+            const peoplePerGroup = parseInt(document.getElementById('peoplePerGroup').value);
+            const groupCount = parseInt(document.getElementById('groupCount').value);
+            const totalNeeded = peoplePerGroup * groupCount;
+
+            while (removedNames.length < totalNeeded && availableNames.length > 0) {
+                const idx = Math.floor(Math.random() * availableNames.length);
+                removedNames.push(availableNames.splice(idx, 1)[0]);
+            }
+
+            currentRotation = 0;
+            drawWheel(availableNames, currentRotation);
+            updateDisplay();
+            updateNameInput();
+
+            // Reset state
+            isSpinning = false;
+            skipAllRequested = false;
+            skipRequested = false;
+            document.getElementById('skipBtn').classList.remove('visible');
+            document.getElementById('skipAllBtn').classList.remove('visible');
+            const btn = document.getElementById('processBtn');
+            btn.disabled = false;
+            btn.textContent = '\ud83c\udfb2 Proses & Putar Wheel';
+
+            // Show summary popup
+            playCelebrationSound();
+            launchConfetti();
+            document.getElementById('popupName').textContent = removedNames.length + ' orang terpilih!';
+            document.getElementById('popupSubtitle').textContent = removedNames.join(', ');
+            document.getElementById('popupOverlay').classList.add('active');
+        }
+
+        function skipAllAnimation() {
+            skipAllRequested = true;
+            if (isSpinning) {
+                skipRequested = true;
+            } else {
+                document.getElementById('popupOverlay').classList.remove('active');
+                pickAllRemaining();
             }
         }
 
@@ -867,6 +929,7 @@ Abdul</textarea>
             btn.disabled = true;
             btn.textContent = '🎲 Memutar...';
             document.getElementById('skipBtn').classList.add('visible');
+            document.getElementById('skipAllBtn').classList.add('visible');
 
             // Random target: 5-8 full rotations + random offset
             const extraSpins = (5 + Math.random() * 3) * 360;
@@ -925,6 +988,7 @@ Abdul</textarea>
             btn.disabled = false;
             btn.textContent = '🎲 Proses & Putar Wheel';
             document.getElementById('skipBtn').classList.remove('visible');
+            document.getElementById('skipAllBtn').classList.remove('visible');
 
             // The pointer is at the top (12 o'clock = -90deg = 270deg from 3 o'clock)
             // Canvas draws starting from -90deg (top), so segment 0 starts at top.
@@ -1015,6 +1079,8 @@ Abdul</textarea>
 
             removedNames = [];
             currentRotation = 0;
+            skipAllRequested = false;
+            skipRequested = false;
             updateNameInput();
             drawWheel(availableNames, 0);
             updateDisplay();
