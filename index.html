@@ -244,6 +244,17 @@
             background: linear-gradient(135deg, #ff69b4, #ff1493);
         }
 
+        .btn-skip {
+            display: none;
+            background: linear-gradient(135deg, #ff8c00, #ff6600);
+            margin-top: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn-skip.visible {
+            display: block;
+        }
+
         .wheel-section {
             display: flex;
             flex-direction: column;
@@ -565,6 +576,7 @@ Abdul</textarea>
                 </div>
 
                 <button class="btn" id="processBtn" onclick="processNames()">🎲 Proses & Putar Wheel</button>
+                <button class="btn btn-skip" id="skipBtn" onclick="skipAnimation()">⏩ Skip Animasi</button>
                 <button class="btn btn-secondary" onclick="resetAll()">🔄 Reset Semua</button>
             </div>
 
@@ -602,6 +614,8 @@ Abdul</textarea>
         let currentRotation = 0;
         let wheelColors = [];
         let audioCtx = null;
+        let skipRequested = false;
+        let pendingTargetRotation = 0;
 
         const WHEEL_COLORS = [
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#F7DC6F',
@@ -848,9 +862,11 @@ Abdul</textarea>
             if (removedNames.length >= totalNeeded) return;
 
             isSpinning = true;
+            skipRequested = false;
             const btn = document.getElementById('processBtn');
             btn.disabled = true;
             btn.textContent = '🎲 Memutar...';
+            document.getElementById('skipBtn').classList.add('visible');
 
             // Random target: 5-8 full rotations + random offset
             const extraSpins = (5 + Math.random() * 3) * 360;
@@ -861,11 +877,21 @@ Abdul</textarea>
             const totalDelta = targetRotation - startRotation;
             const duration = 4000;
             const startTime = performance.now();
+            pendingTargetRotation = targetRotation;
 
             let lastTickAngle = startRotation;
             const segAngle = 360 / availableNames.length;
 
             function animate(now) {
+                if (skipRequested) {
+                    // Jump langsung ke hasil akhir
+                    const finalAngle = pendingTargetRotation;
+                    drawWheel(availableNames, finalAngle);
+                    currentRotation = finalAngle % 360;
+                    onSpinComplete(finalAngle);
+                    return;
+                }
+
                 const elapsed = now - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 // Ease out cubic
@@ -894,9 +920,11 @@ Abdul</textarea>
 
         function onSpinComplete(finalAngle) {
             isSpinning = false;
+            skipRequested = false;
             const btn = document.getElementById('processBtn');
             btn.disabled = false;
             btn.textContent = '🎲 Proses & Putar Wheel';
+            document.getElementById('skipBtn').classList.remove('visible');
 
             // The pointer is at the top (12 o'clock = -90deg = 270deg from 3 o'clock)
             // Canvas draws starting from -90deg (top), so segment 0 starts at top.
@@ -954,6 +982,13 @@ Abdul</textarea>
             const originalNames = parseNames();
             const selectedSet = new Set(removedNames);
             nameInput.value = originalNames.filter(n => !selectedSet.has(n)).join('\n');
+        }
+
+        // ===== SKIP ANIMATION =====
+        function skipAnimation() {
+            if (isSpinning) {
+                skipRequested = true;
+            }
         }
 
         // ===== PROCESS & RESET =====
