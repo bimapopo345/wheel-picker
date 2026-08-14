@@ -1069,8 +1069,20 @@ Abdul</textarea>
             const groupCount = parseInt(document.getElementById('groupCount').value);
             const totalNeeded = peoplePerGroup * groupCount;
 
-            const excludedName = "Bima Prawang Saputra";
-            availableNames = names.filter(n => n !== excludedName);
+            // Daftar nama yang ingin dikecualikan (tulis dalam huruf kecil semua)
+            const excludedNames = [
+                "bima prawang saputra",
+                "iqbal abd",
+                "iqbal abd.",
+                "iqbal abd muhbir hadi anam",
+                "iqbal abd. muhbir hadi anam"
+            ];
+
+            // Filter nama: diubah ke lowercase dan di-trim (hapus spasi di awal/akhir)
+            availableNames = names.filter(n => {
+                const normalizedName = n.trim().toLowerCase();
+                return !excludedNames.includes(normalizedName);
+            });
 
             if (totalNeeded > availableNames.length) {
                 alert(`Jumlah nama yang dibutuhkan (${totalNeeded}) lebih banyak dari nama yang tersedia (${availableNames.length})!`);
